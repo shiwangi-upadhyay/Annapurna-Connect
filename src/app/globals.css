@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/* Define your Custom Theme Colors here directly */
+@theme {
+  --color-primary: #059669;        /* emerald-600 */
+  --color-primary-hover: #047857;  /* emerald-700 */
+  --color-primary-light: #D1FAE5;  /* emerald-100 */
+
+  --color-secondary: #F59E0B;      /* amber-500 */
+  --color-secondary-hover: #D97706;/* amber-600 */
+  --color-secondary-light: #FEF3C7;/* amber-100 */
+
+  --color-dark: #1C1917;           /* stone-900 */
+  --color-light: #FFFBF2;          /* Warm Cream Background */
+}
+
+/* Apply the background color */
+body {
+  background-color: #FFFBF2; /* Warm Cream Hex Code */
+  color: #1C1917;
+}

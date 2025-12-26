@@ -1,0 +1,87 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // or "sqlite" if testing locally
+}
+
+// 1. User Roles
+enum UserRole {
+  GIVER // Restaurants, Caterers
+  TAKER // NGOs, Students
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String   // Will be hashed
+  role      UserRole @default(TAKER)
+  phone     String?
+  
+  // Relations
+  listings  FoodListing[] // Things they posted (if Giver)
+  claims    Claim[]       // Things they claimed (if Taker)
+  
+  createdAt DateTime @default(now())
+}
+
+// 2. The Food Listing (Supports "Panghat" Splitting)
+model FoodListing {
+  id           String   @id @default(cuid())
+  
+  // Who posted it?
+  giverId      String
+  giver        User     @relation(fields: [giverId], references: [id])
+
+  // Smart Tap Data (Category, etc.)
+  foodType     String   // "Rice", "Bread", "Curry"
+  description  String?
+  
+  // The "Panghat" Logic (Wedding Rescue)
+  isEvent      Boolean  @default(false) // Is this a bulk wedding event?
+  totalQtyKg   Float    // e.g., 50kg
+  remainingQty Float    // e.g., 30kg (Decreases as people claim)
+  
+  // The "Hybrid" Logic (Donate or Sell)
+  listingType  String   // "DONATION" or "SALE"
+  pricePerKg   Float    @default(0) // 0 if Donation
+  originalPrice Float?  // To calculate the 80% discount
+  
+  // Trust & Safety
+  cookedAt     DateTime
+  expiryAt     DateTime
+  
+  // Status
+  status       String   @default("AVAILABLE") // AVAILABLE, SOLD_OUT, EXPIRED
+  
+  // Relations
+  claims       Claim[]  // Multiple claims allowed per listing
+  
+  createdAt    DateTime @default(now())
+}
+
+// 3. The Claim (One Listing -> Many Claims)
+model Claim {
+  id           String   @id @default(cuid())
+  
+  listingId    String
+  listing      FoodListing @relation(fields: [listingId], references: [id])
+  
+  takerId      String
+  taker        User        @relation(fields: [takerId], references: [id])
+  
+  // How much did this specific NGO take?
+  claimedQty   Float       // e.g., NGO A takes 10kg
+  
+  status       String      @default("RESERVED") // RESERVED, COMPLETED, CANCELLED
+  
+  // Logistics
+  pickupTime   DateTime?
+  
+  createdAt    DateTime    @default(now())
+}
