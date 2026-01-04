@@ -6,6 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql" // or "sqlite" if testing locally
+  url      = env("DATABASE_URL")
 }
 
 // 1. User Roles

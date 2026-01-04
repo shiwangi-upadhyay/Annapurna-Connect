@@ -1,8 +1,18 @@
 // src/lib/db.ts
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
+const prismaClientSingleton = () => {
+  // We pass a config object here to satisfy the "non-empty options" requirement
+  // and to help us debug query issues if they arise.
+  return new PrismaClient({
+    log: ['warn', 'error'],
+  });
+};
 
-export const prisma = globalForPrisma.prisma || new PrismaClient()
+declare global {
+  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+export const prisma = globalThis.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== "production") globalThis.prisma = prisma;
