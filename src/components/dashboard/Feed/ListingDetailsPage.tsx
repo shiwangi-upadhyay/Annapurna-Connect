@@ -3,6 +3,7 @@ import { getListingById } from "@/features/food/queries";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ClaimForm from "./ClaimForm";
 
 // Helper for formatted time
 function formatDateTime(date: Date) {
@@ -80,17 +81,14 @@ export default async function ListingDetailsPage({ id }: { id: string }) {
           {/* ACTION BUTTON AREA */}
           <div className="pt-6 border-t border-stone-200">
             {isOwner ? (
-              <button disabled className="w-full bg-stone-200 text-stone-500 font-bold py-4 rounded-xl cursor-not-allowed">
+              <div className="bg-stone-100 text-stone-500 font-bold py-4 rounded-xl text-center border border-stone-200">
                 This is your listing
-              </button>
+              </div>
             ) : (
-              <button 
-                className="w-full bg-[#1F1F1F] hover:bg-[#C2410C] text-white font-bold py-4 rounded-xl shadow-xl shadow-stone-200 transition-all hover:-translate-y-1 flex justify-center items-center gap-2"
-              >
-                <span>Claim This Food</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              </button>
+              /* 2. Render the new form here */
+              <ClaimForm listingId={listing.id} maxQty={listing.remainingQty} />
             )}
+            
             <p className="text-center text-xs text-stone-400 mt-4">
               By claiming, you agree to pickup within the expiry time.
             </p>

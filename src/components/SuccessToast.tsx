@@ -7,25 +7,25 @@ import { useEffect, useState } from "react";
 export default function SuccessToast() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [isVisible, setIsVisible] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    // Check if URL has ?posted=true
     if (searchParams.get("posted") === "true") {
-      setIsVisible(true);
-      
-      // Hide after 4 seconds
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-        // Optional: Clean up the URL (remove ?posted=true)
-        router.replace("/dashboard");
-      }, 4000);
+      setMessage("Donation Posted Successfully!");
+    } else if (searchParams.get("claimed") === "true") {
+      setMessage("Food Reserved Successfully!");
+    }
 
+    if (searchParams.get("posted") || searchParams.get("claimed")) {
+      const timer = setTimeout(() => {
+        setMessage("");
+        router.replace("/dashboard/history"); // Clear URL
+      }, 4000);
       return () => clearTimeout(timer);
     }
   }, [searchParams, router]);
 
-  if (!isVisible) return null;
+  if (!message) return null;
 
   return (
     <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 animate-bounce-in">
@@ -36,12 +36,9 @@ export default function SuccessToast() {
           </svg>
         </div>
         <div>
-          <h4 className="font-bold text-sm">Donation Posted!</h4>
-          <p className="text-xs text-stone-400">Your food is now visible to the community.</p>
+          <h4 className="font-bold text-sm">Success!</h4>
+          <p className="text-xs text-stone-400">{message}</p>
         </div>
-        <button onClick={() => setIsVisible(false)} className="text-stone-500 hover:text-white ml-2">
-          ✕
-        </button>
       </div>
     </div>
   );

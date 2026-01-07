@@ -12,6 +12,19 @@
 
   --color-dark: #1C1917;           /* stone-900 */
   --color-light: #FFFBF2;          /* Warm Cream Background */
+
+   /* Define the animation utility */
+  --animate-scroll: scroll 40s linear infinite;
+
+  /* Define the keyframes */
+  @keyframes scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 /* Apply the background color */
