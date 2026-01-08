@@ -212,3 +212,67 @@ export async function deleteListing(listingId: string) {
     return { error: "Failed to delete listing." };
   }
 }
+
+
+export async function updateListing(listingId: string, prevState: any, formData: FormData) {
+  const session = await auth();
+  if (!session?.user) return { error: "Unauthorized" };
+
+  // Reuse the same schema as Create, but make things optional if needed
+  // For simplicity, we assume full re-submission
+  const rawData = {
+    foodType: formData.get("foodType"),
+    quantity: formData.get("quantity"),
+    expiryHours: formData.get("expiryHours"),
+    description: formData.get("description"),
+  };
+
+  const validated = ListingSchema.safeParse(rawData); // Reusing the schema from create
+  if (!validated.success) {
+    return { error: validated.error.issues[0].message };
+  }
+
+  const { foodType, quantity, expiryHours, description } = validated.data;
+
+  // Calculate Expiry
+  const expiryDate = new Date();
+  expiryDate.setHours(expiryDate.getHours() + expiryHours);
+
+  try {
+    // 1. Check ownership & current state
+    const existing = await prisma.foodListing.findUnique({
+      where: { id: listingId },
+      include: { claims: true }
+    });
+
+    if (!existing) return { error: "Not found" };
+    if (existing.giverId !== session.user.id) return { error: "Unauthorized" };
+
+    // 2. Logic: If claims exist, we cannot lower quantity below what is already claimed
+    const totalClaimed = existing.totalQtyKg - existing.remainingQty;
+    if (quantity < totalClaimed) {
+      return { error: `Cannot reduce quantity below ${totalClaimed}kg (already claimed).` };
+    }
+
+    // Recalculate remaining
+    const newRemaining = quantity - totalClaimed;
+
+    // 3. Update
+    await prisma.foodListing.update({
+      where: { id: listingId },
+      data: {
+        foodType,
+        totalQtyKg: quantity,
+        remainingQty: newRemaining,
+        expiryAt: expiryDate,
+        description,
+      },
+    });
+
+  } catch (err) {
+    return { error: "Failed to update listing." };
+  }
+
+  revalidatePath("/dashboard/manage");
+  redirect("/dashboard/manage");
+}
