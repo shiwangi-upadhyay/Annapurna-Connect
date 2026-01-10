@@ -57,10 +57,10 @@ export default function Navbar({ user }: { user: User }) {
 						)}
 
 						<Link
-							href="/dashboard/history"
+							href="/dashboard/manage"
 							className="text-stone-600 hover:text-[#C2410C] font-medium transition-colors"
 						>
-							History
+							Listings
 						</Link>
 
 						{/* User Profile / Logout */}

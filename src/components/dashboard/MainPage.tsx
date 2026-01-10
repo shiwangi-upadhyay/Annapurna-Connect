@@ -49,14 +49,14 @@ export default async function DashboardPage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
           </Link>
 
-          {isGiver && (
+          {/* {isGiver && (
               <Link 
                 href="/dashboard/manage"
                 className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-8 py-4 rounded-xl font-bold transition-all hover:-translate-y-1 backdrop-blur-sm"
               >
                 Manage Listings
               </Link>
-            )}
+            )} */}
         </div>
 
         {/* Decorative Background Blob */}
