@@ -2,8 +2,13 @@
 import { PrismaClient } from '@prisma/client'
 import { hash } from 'bcryptjs';
 
-const prisma = new PrismaClient()
-
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DIRECT_URL, // <--- Forces using the Admin Port
+    },
+  },
+})
 // Helper to get random element from array
 const random = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
 
