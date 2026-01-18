@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "migration:generate": "prisma migrate dev",
-    "migration:push": "prisma db push"
+    "migration:push": "prisma db push",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
