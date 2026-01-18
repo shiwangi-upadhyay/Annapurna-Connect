@@ -1,5 +1,6 @@
 // prisma/seed.ts
 import { PrismaClient } from '@prisma/client'
+import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient()
 
@@ -20,13 +21,14 @@ async function main() {
   const users = []
   const roles = ['GIVER', 'GIVER', 'TAKER', 'TAKER', 'TAKER'] // Weighted towards Takers
 
+  const passwordHash = await hash('password123', 12)
   for (let i = 0; i < 50; i++) {
     const role = roles[i % roles.length];
     const user = await prisma.user.create({
       data: {
         name: `User ${i + 1}`,
         email: `user${i + 1}@test.com`,
-        password: 'hashedpassword123', // In real app this should be hashed
+        password: passwordHash, // In real app this should be hashed
         role: role as any, // Cast to any to avoid TS enum issues if strict
         phone: `98765432${i < 10 ? '0' + i : i}`,
         orgName: role === 'GIVER' ? `Restaurant ${i}` : `NGO ${i}`,

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
 
-// Extend the Session user type to include 'id' and 'role'
+// Extend NextAuth types to include custom 'id' and 'role' on user and JWT
 declare module "next-auth" {
   interface Session {
     user: {
@@ -15,6 +15,22 @@ declare module "next-auth" {
       image?: string | null;
       role?: string;
     }
+  }
+  interface User {
+    id: string;
+    role?: string;
+  }
+}
+
+declare module "@auth/core/adapters" {
+  interface AdapterUser {
+    role?: string;
+  }
+}
+
+declare module "@auth/core/jwt" {
+  interface JWT {
+    role?: string;
   }
 }
 
@@ -35,22 +51,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token.sub && session.user) {
         session.user.id = token.sub;
       }
-      if (token.role && session.user) {
-        // @ts-ignore
-        session.user.role = token.role; 
+      if (typeof token.role === "string" && session.user) {
+        session.user.role = token.role;
       }
       return session;
     },
-    async jwt({ token }) {
-      if (!token.sub) return token;
-      
-      const existingUser = await prisma.user.findUnique({
-        where: { id: token.sub }
-      });
-
-      if (!existingUser) return token;
-
-      token.role = existingUser.role;
+    async jwt({ token, user }) {
+      // IF 'user' exists, it means they just logged in.
+      // We grab the role directly from the user object passed by authorize()
+      if (user && typeof user.role === "string") {
+        token.role = user.role;
+      }
+      // 👆 NO DATABASE CALL HERE. SUPER FAST. 👆
       return token;
     }
   },
