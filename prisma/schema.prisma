@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" // or "sqlite" if testing locally
+  provider = "postgresql" 
   url      = env("DATABASE_URL")
 }
 
@@ -16,57 +16,100 @@ enum UserRole {
   ADMIN
 }
 
-model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String   @unique
-  password  String   // Will be hashed
-  role      UserRole @default(TAKER)
-  phone     String?
-  
-  // Relations
-  listings  FoodListing[] // Things they posted (if Giver)
-  claims    Claim[]       // Things they claimed (if Taker)
-  
-  createdAt DateTime @default(now())
+// 2. Auth Models (Required for NextAuth/Auth.js)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
 }
 
-// 2. The Food Listing (Supports "Panghat" Splitting)
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// 3. The User Model
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?         // Needed for Credentials Login (Email/Pass)
+  // FIX: Use 'UserRole' (the name of the enum above), not 'Role'
+  role          UserRole        @default(TAKER) 
+  
+  // --- PROFILE FIELDS ---
+  phone         String?         
+  address       String?         
+  orgName       String?         
+  bio           String?         @db.Text 
+  // --------------------------
+
+  accounts      Account[]
+  sessions      Session[]
+  
+  listedFoods   FoodListing[]
+  claims        Claim[]
+
+  createdAt DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+  
+}
+
+// 4. The Food Listing
 model FoodListing {
   id           String   @id @default(cuid())
   
-  // Who posted it?
   giverId      String
   giver        User     @relation(fields: [giverId], references: [id])
 
-  // Smart Tap Data (Category, etc.)
-  foodType     String   // "Rice", "Bread", "Curry"
+  foodType     String   
   description  String?
   
-  // The "Panghat" Logic (Wedding Rescue)
-  isEvent      Boolean  @default(false) // Is this a bulk wedding event?
-  totalQtyKg   Float    // e.g., 50kg
-  remainingQty Float    // e.g., 30kg (Decreases as people claim)
+  isEvent      Boolean  @default(false) 
+  totalQtyKg   Float    
+  remainingQty Float    
   
-  // The "Hybrid" Logic (Donate or Sell)
-  listingType  String   // "DONATION" or "SALE"
-  pricePerKg   Float    @default(0) // 0 if Donation
-  originalPrice Float?  // To calculate the 80% discount
+  listingType  String   
+  pricePerKg   Float    @default(0) 
+  originalPrice Float?  
   
-  // Trust & Safety
   cookedAt     DateTime
   expiryAt     DateTime
   
-  // Status
-  status       String   @default("AVAILABLE") // AVAILABLE, SOLD_OUT, EXPIRED
+  status       String   @default("AVAILABLE") 
   
-  // Relations
-  claims       Claim[]  // Multiple claims allowed per listing
+  claims       Claim[]  
   
   createdAt    DateTime @default(now())
 }
 
-// 3. The Claim (One Listing -> Many Claims)
+// 5. The Claim
 model Claim {
   id           String   @id @default(cuid())
   
@@ -76,12 +119,12 @@ model Claim {
   takerId      String
   taker        User        @relation(fields: [takerId], references: [id])
   
-  // How much did this specific NGO take?
-  claimedQty   Float       // e.g., NGO A takes 10kg
+  claimedQty   Float   
+
+  verificationCode String  @default("PENDING")    
   
-  status       String      @default("RESERVED") // RESERVED, COMPLETED, CANCELLED
+  status       String      @default("RESERVED") 
   
-  // Logistics
   pickupTime   DateTime?
   
   createdAt    DateTime    @default(now())
