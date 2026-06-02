@@ -37,7 +37,7 @@ export default function ClaimForm({
             value={qty}
             onChange={(e) => setQty(parseFloat(e.target.value))}
             max={maxQty}
-            min={0.5}
+            min={maxQty >= 2 ? 2 : maxQty}
             step={0.5}
             className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#C2410C] outline-none font-bold text-lg"
           />

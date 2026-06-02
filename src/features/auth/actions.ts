@@ -4,7 +4,7 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { redirect } from "next/navigation";
+import { signIn } from "@/lib/auth";
 
 // Validation Rules
 const RegisterSchema = z.object({
@@ -57,6 +57,10 @@ export async function registerUser(prevState: any, formData: FormData) {
     return { error: "Database error. Please try again." };
   }
 
-  // 5. Redirect
-  redirect("/login?success=true");
+  // 5. Auto-login and Redirect
+  await signIn("credentials", {
+    email,
+    password,
+    redirectTo: "/dashboard",
+  });
 }

@@ -69,7 +69,11 @@ model User {
   address       String?         
   orgName       String?         
   bio           String?         @db.Text 
-  // --------------------------
+  // --- TRUST & VERIFICATION ---
+  trustScore    Int             @default(0)
+  strikes       Int             @default(0)
+  isVerifiedNGO Boolean         @default(false)
+  ngoId         String?
 
   accounts      Account[]
   sessions      Session[]
@@ -125,6 +129,10 @@ model Claim {
   verificationCode String  @default("PENDING")    
   
   status       String      @default("RESERVED") 
+  
+  // --- PROOF OF IMPACT ---
+  poiImageUrl  String?
+  poiUploadedAt DateTime?
   
   pickupTime   DateTime?
   

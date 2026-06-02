@@ -80,6 +80,7 @@ export async function createListing(prevState: any, formData: FormData) {
 
 const ClaimSchema = z.object({
   listingId: z.string(),
+  // Edge Case A: Min bulk claim is 2kg, unless the total listing is smaller than 2kg (handled in logic)
   claimQty: z.coerce.number().min(0.5, "Minimum claim is 0.5kg"),
 });
 
@@ -102,10 +103,25 @@ export async function claimFood(prevState: any, formData: FormData) {
   const { listingId, claimQty } = validated.data;
 
   try {
-    // We use a Transaction to ensure safety (all or nothing)
     await prisma.$transaction(async (tx) => {
-      
-      // 1. Get fresh data
+      // 1. Fetch User data for Edge Case B (Trust Score)
+      const user = await tx.user.findUnique({
+        where: { id: session.user.id! }
+      });
+
+      if (!user) throw new Error("User not found.");
+
+      // Algorithmic Caps (Edge Case B: The Hoarder)
+      const trustScore = user.trustScore || 0;
+      let maxAllowedQty = 5; // Default 5kg for new users
+      if (trustScore > 50) maxAllowedQty = 50;
+      else if (trustScore > 20) maxAllowedQty = 20;
+
+      if (claimQty > maxAllowedQty) {
+        throw new Error(`Trust Score limit: You can only claim up to ${maxAllowedQty}kg at a time. Complete more distributions to raise your cap!`);
+      }
+
+      // 2. Fetch fresh listing data
       const listing = await tx.foodListing.findUnique({
         where: { id: listingId },
       });
@@ -114,7 +130,12 @@ export async function claimFood(prevState: any, formData: FormData) {
       if (listing.status !== "AVAILABLE") throw new Error("This food is no longer available.");
       if (listing.remainingQty < claimQty) throw new Error(`Only ${listing.remainingQty}kg is left.`);
 
-      // 2. Create the Claim Record
+      // Edge Case A (Free Meal Seeker): Cannot claim less than 2kg if the listing has >2kg available
+      if (listing.remainingQty >= 2 && claimQty < 2) {
+        throw new Error("B2B Rule: You must claim at least 2kg for distribution.");
+      }
+
+      // 3. Create the Claim Record
       await tx.claim.create({
         data: {
           listingId,
@@ -124,7 +145,7 @@ export async function claimFood(prevState: any, formData: FormData) {
         },
       });
 
-      // 3. Update the Food Listing (Subtract Qty)
+      // 4. Update the Food Listing
       const newRemaining = listing.remainingQty - claimQty;
       const newStatus = newRemaining <= 0 ? "SOLD_OUT" : "AVAILABLE";
 
@@ -138,7 +159,6 @@ export async function claimFood(prevState: any, formData: FormData) {
     });
 
   } catch (err: any) {
-    // If anything failed in the transaction, we catch it here
     return { error: err.message || "Failed to claim food." };
   }
 
@@ -158,22 +178,68 @@ export async function markClaimAsCompleted(listingId: string, claimId: string) {
 
     if (!listing) return { error: "Listing not found" };
 
-    // 2. Security Check: Only the GIVER can complete the claim
+    // 2. Security Check: Only the GIVER can confirm pickup.
     if (listing.giverId !== session.user.id) {
       return { error: "Only the Giver can confirm pickup." };
     }
     
-    // 3. Update Status
+    // 3. Update Status to IN_TRANSIT (PoI Loop Phase 1)
     await prisma.claim.update({
       where: { id: claimId },
-      data: { status: "COMPLETED" }
+      data: { status: "IN_TRANSIT" }
     });
 
+    revalidatePath("/dashboard/manage");
     revalidatePath("/dashboard/history");
     return { success: true };
 
   } catch (error) {
     return { error: "Failed to update status." };
+  }
+}
+
+export async function submitProofOfImpact(claimId: string, base64Image: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "TAKER") {
+    return { error: "Unauthorized" };
+  }
+
+  try {
+    // 1. Fetch the claim to ensure ownership
+    const claim = await prisma.claim.findUnique({
+      where: { id: claimId },
+    });
+
+    if (!claim || claim.takerId !== session.user.id) {
+      return { error: "Claim not found or unauthorized" };
+    }
+
+    if (claim.status !== "IN_TRANSIT") {
+      return { error: "Claim must be IN_TRANSIT to upload Proof of Impact" };
+    }
+
+    // 2. Update Claim and User Trust Score in a transaction
+    await prisma.$transaction(async (tx) => {
+      await tx.claim.update({
+        where: { id: claimId },
+        data: { 
+          status: "COMPLETED",
+          poiImageUrl: base64Image,
+          poiUploadedAt: new Date(),
+        }
+      });
+
+      // Increase trust score by 10 for a successful distribution
+      await tx.user.update({
+        where: { id: session.user.id! },
+        data: { trustScore: { increment: 10 } }
+      });
+    });
+
+    revalidatePath("/dashboard/history");
+    return { success: true };
+  } catch (error) {
+    return { error: "Failed to submit Proof of Impact." };
   }
 }
 

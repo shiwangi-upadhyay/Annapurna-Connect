@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import StatusBadge from "@/components/dashboard/Manage/StatusBadge";
 import ClaimsModal from "./ClaimsModal"; // Import the new modal
+import PoIUploadButton from "./PoIUploadButton";
 
 export default function HistoryDashboard({
   donations,
@@ -178,12 +179,18 @@ export default function HistoryDashboard({
                       </div>
                     </div>
                     <div className="bg-[#FDFBF7] px-6 py-3 rounded-xl border border-stone-200 flex flex-col items-center justify-center min-w-35">
-                      <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
-                        Your Code
-                      </span>
-                      <span className="text-2xl font-mono font-bold text-[#C2410C] tracking-widest">
-                        {claim.id.slice(-6).toUpperCase()}
-                      </span>
+                      {claim.status === "IN_TRANSIT" ? (
+                        <PoIUploadButton claimId={claim.id} />
+                      ) : (
+                        <>
+                          <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
+                            Your Code
+                          </span>
+                          <span className={`text-2xl font-mono font-bold tracking-widest ${claim.status === "COMPLETED" ? "text-stone-300 line-through" : "text-[#C2410C]"}`}>
+                            {claim.id.slice(-6).toUpperCase()}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))
